@@ -1,11 +1,27 @@
 <launch>
-	<param name ="/use_sim_time" value="false"/>
-	<arg name="gui" default="false" />
-	<param name="use_gui" value="$(arg gui)"/>
+	<arg name="is_physical" default="true"/>
 	<param name="enable_tf_publish" value="true"/>
 	<param name="enable_joint_state_publish" value="true"/>
+
+	<group unless="$(arg is_physical)">
+		<param name ="/use_sim_time" value="true"/>
+	</group>
+
+	<group if="$(arg is_physical)">
+		<param name ="/use_sim_time" value="false"/>
+		<node name="scuttle_driver" pkg="scuttle_driver" type="scuttle_driver.py" output="screen"/>
+	</group>
+
 	<param name="robot_description" command="cat $(find scuttle_description)/urdf/scuttle.xacro" />
-	<node name="scuttle_driver" pkg="scuttle_driver" type="scuttle_driver.py" output="screen"/>
 	<include file="$(find rplidar_ros)/launch/rplidar.launch" />
-	<include file="$(find teleop_twist_joy)/launch/teleop.launch" />
+
+	<include file="$(find scuttle_slam)/launch/scuttle_slam.launch">
+		<arg name="map_file" value="$(find scuttle_navigation)/maps/map.yaml"/>
+		<arg name="move_forward_only" default="false"/>
+		<arg name="is_physical" default="$(arg is_physical)"/>
+  	</include>
+
+	<include file="$(find scuttle_navigation)/launch/scuttle_navigation.launch">
+		<arg name="slam_methods" value="gmapping"/>
+	</include>
 </launch>
