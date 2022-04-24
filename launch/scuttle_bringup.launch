@@ -5,6 +5,8 @@
 
 	<group unless="$(arg is_physical)">
 		<param name ="/use_sim_time" value="true"/>
+
+		<!-- Don't need a lidar here because the gazebo files already have that included -->
 	</group>
 
 	<group if="$(arg is_physical)">
@@ -13,9 +15,10 @@
 		<include file="$(find rplidar_ros)/launch/rplidar.launch" />
 	</group>
 
-	<include file="$(find scuttle_slam)/launch/scuttle_slam.launch">
-		<arg name="slam_methods" value="gmapping"/>
-  	</include>
+	<!--
+		We don't include the SLAM node here because gmapping puts out a lot of logs to the console that can't be
+		silenced. So instead we run that as a stand-alone node. That way gmapping won't polute the navigation logs
+	-->
 
 	<include file="$(find scuttle_navigation)/launch/scuttle_navigation.launch">
 		<arg name="map_file" value="$(find scuttle_navigation)/maps/map.yaml"/>
