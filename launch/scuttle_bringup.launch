@@ -7,4 +7,5 @@
 	<param name="robot_description" command="cat $(find scuttle_description)/urdf/scuttle.xacro" />
 	<node name="scuttle_driver" pkg="scuttle_driver" type="scuttle_driver.py" output="screen"/>
 	<include file="$(find rplidar_ros)/launch/rplidar.launch" />
+	<include file="$(find teleop_twist_joy)/launch/teleop.launch" />
 </launch>
