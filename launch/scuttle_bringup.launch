@@ -1,7 +1,5 @@
 <launch>
 	<arg name="is_physical" default="true"/>
-	<param name="enable_tf_publish" value="true"/>
-	<param name="enable_joint_state_publish" value="true"/>
 
 	<include file="$(find scuttle_bringup)/launch/base.launch" >
 		<arg name="is_physical" value="$(arg is_physical)"/>

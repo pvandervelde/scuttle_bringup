@@ -1,5 +1,7 @@
 <launch>
 	<arg name="is_physical" default="true"/>
+	<param name="enable_tf_publish" value="true"/>
+	<param name="enable_joint_state_publish" value="true"/>
 
 	<group unless="$(arg is_physical)">
 		<param name ="/use_sim_time" value="true"/>
