@@ -16,12 +16,12 @@
 	<include file="$(find rplidar_ros)/launch/rplidar.launch" />
 
 	<include file="$(find scuttle_slam)/launch/scuttle_slam.launch">
-		<arg name="map_file" value="$(find scuttle_navigation)/maps/map.yaml"/>
-		<arg name="move_forward_only" value="false"/>
-		<arg name="is_physical" value="$(arg is_physical)"/>
+		<arg name="slam_methods" value="gmapping"/>
   	</include>
 
 	<include file="$(find scuttle_navigation)/launch/scuttle_navigation.launch">
-		<arg name="slam_methods" value="gmapping"/>
+		<arg name="map_file" value="$(find scuttle_navigation)/maps/map.yaml"/>
+		<arg name="move_forward_only" value="false"/>
+		<arg name="is_physical" value="$(arg is_physical)"/>
 	</include>
 </launch>
