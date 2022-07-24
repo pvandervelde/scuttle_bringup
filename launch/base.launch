@@ -6,10 +6,13 @@
     <!--
         Publish the robot model to the parameter server so that other nodes can determine what
         the different joints of the robot are.
+
+        The robot model comes from 'scuttle_model' which pulls the default scuttle parts from
+        'scuttle_description' and allows users to add their own parts.
     -->
     <param
         name="robot_description"
-        command="$(find xacro)/xacro $(find scuttle_description)/urdf/scuttle.xacro" />
+        command="$(find xacro)/xacro $(find scuttle_model)/urdf/scuttle.xacro" />
 
     <group unless="$(arg is_physical)">
         <param name ="/use_sim_time" value="true"/>
