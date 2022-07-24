@@ -1,27 +1,60 @@
 <launch>
-	<arg name="is_physical" default="true"/>
-	<param name="enable_tf_publish" value="true"/>
-	<param name="enable_joint_state_publish" value="true"/>
+    <arg name="is_physical" default="true"/>
+    <param name="enable_tf_publish" value="true"/>
+    <param name="enable_joint_state_publish" value="true"/>
 
-	<group unless="$(arg is_physical)">
-		<param name ="/use_sim_time" value="true"/>
+    <!--
+        Publish the robot model to the parameter server so that other nodes can determine what
+        the different joints of the robot are.
+    -->
+    <param
+        name="robot_description"
+        command="$(find xacro)/xacro $(find scuttle_description)/urdf/scuttle.xacro" />
 
-		<!-- Don't need a lidar here because the gazebo files already have that included -->
-	</group>
+    <group unless="$(arg is_physical)">
+        <param name ="/use_sim_time" value="true"/>
 
-	<group if="$(arg is_physical)">
-		<param name ="/use_sim_time" value="false"/>
-		<node name="scuttle_driver" pkg="scuttle_driver" type="scuttle_driver.py" output="screen"/>
-	</group>
+        <!-- Don't need a lidar here because the gazebo files already have that included -->
+    </group>
 
-	<!--
-		We don't include the SLAM node here because gmapping puts out a lot of logs to the console that can't be
-		silenced. So instead we run that as a stand-alone node. That way gmapping won't polute the navigation logs
-	-->
+    <group if="$(arg is_physical)">
+        <param name ="/use_sim_time" value="false"/>
+        <node name="scuttle_driver" pkg="scuttle_driver" type="scuttle_driver.py" output="screen"/>
+    </group>
 
-	<include file="$(find scuttle_navigation)/launch/scuttle_navigation.launch">
-		<arg name="map_file" value="$(find scuttle_navigation)/maps/map.yaml"/>
-		<arg name="move_forward_only" value="false"/>
-		<arg name="is_physical" value="$(arg is_physical)"/>
-	</include>
+    <!--
+        We always need to publish joint and robot states. So we do that here.
+    -->
+    <!--
+        First publish the joint state for the robot. The joint_state_publisher (see: http://wiki.ros.org/joint_state_publisher)
+        picks up the robot description (provided by scuttle_description and scuttle_model) from the
+        parameter server via the `robot_description` parameter.
+        The joint_state_publisher is loaded first because the robot_state_publisher listens to the
+        sensor_msgs/JointState topic which is published by the joint_state_publisher
+    -->
+    <node
+        name="joint_state_publisher"
+        pkg="joint_state_publisher"
+        type="joint_state_publisher"/>
+
+    <!--
+        Second publish the robot state. The robot_state_publisher (see: http://wiki.ros.org/robot_state_publisher)
+        picks up the robot description (provided by scuttle_description and scuttle_model) from the
+        parameter server via the `robot_description` parameter.
+    -->
+    <node
+        name="robot_state_publisher"
+        pkg="robot_state_publisher"
+        type="robot_state_publisher"/>
+
+    <!--
+        We don't include the SLAM node here because gmapping puts out a lot of logs to the console that can't be
+        silenced. So instead we run that as a stand-alone node. That way gmapping won't polute the navigation logs
+    -->
+
+    <include file="$(find scuttle_navigation)/launch/scuttle_navigation.launch">
+        <arg name="map_file" value="$(find scuttle_navigation)/maps/map.yaml"/>
+        <arg name="move_forward_only" value="false"/>
+        <arg name="is_physical" value="$(arg is_physical)"/>
+    </include>
 </launch>
