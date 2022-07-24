@@ -14,15 +14,14 @@
         name="robot_description"
         command="$(find xacro)/xacro $(find scuttle_model)/urdf/scuttle.xacro" />
 
+    <!--
+        Figure out if we're running virtual or real world and set the 'use_sim_time' parameter.
+    -->
     <group unless="$(arg is_physical)">
         <param name ="/use_sim_time" value="true"/>
-
-        <!-- Don't need a lidar here because the gazebo files already have that included -->
     </group>
-
     <group if="$(arg is_physical)">
         <param name ="/use_sim_time" value="false"/>
-        <node name="scuttle_driver" pkg="scuttle_driver" type="scuttle_driver.py" output="screen"/>
     </group>
 
     <!--
@@ -51,20 +50,33 @@
         type="robot_state_publisher"/>
 
     <!--
-        Start the custom nodes
-    -->
-    <include file="$(find scuttle_model)/launch/scuttle_model.launch">
-        <arg name="is_physical" value="$(arg is_physical)"/>
-    </include>
-
-    <!--
         We don't include the SLAM node here because gmapping puts out a lot of logs to the console that can't be
         silenced. So instead we run that as a stand-alone node. That way gmapping won't polute the navigation logs
     -->
 
+    <!--
+        Load scuttle_driver and navigation before loading the custom nodes so that the custom
+        nodes can override the parameters for scuttle_driver and the navigation nodes.
+    -->
+    <group if="$(arg is_physical)">
+        <include file="$(find scuttle_driver)/launch/scuttle_driver.launch">
+            <arg name="is_physical" value="$(arg is_physical)"/>
+        </include>
+    </group>
+
     <include file="$(find scuttle_navigation)/launch/scuttle_navigation.launch">
         <arg name="map_file" value="$(find scuttle_navigation)/maps/map.yaml"/>
         <arg name="move_forward_only" value="false"/>
+        <arg name="is_physical" value="$(arg is_physical)"/>
+    </include>
+
+    <!--
+        Load the custom nodes.
+
+        By loading the custom nodes last they have a chance of overriding the parameter settings
+        for all the other nodes (see: http://wiki.ros.org/roslaunch/XML#Evaluation_order)
+    -->
+    <include file="$(find scuttle_model)/launch/scuttle_model.launch">
         <arg name="is_physical" value="$(arg is_physical)"/>
     </include>
 </launch>
