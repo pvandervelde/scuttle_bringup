@@ -71,6 +71,17 @@
     </include>
 
     <!--
+        Load the Twist multiplexer. This node takes multiple topics, each of which contains Twist
+        messages. It then selects the most appropriate Twist command to actually send to the
+        driver.
+    -->
+    <include file="$(find twist_mux)/launch/twist_mux.launch">
+        <arg name="cmd_vel_out" value="cmd_vel"/>
+        <arg name="config_locks"  value="$(find scuttle_model)/config/twist_mux_locks.yaml"/>
+        <arg name="config_topics" value="$(find scuttle_model)/config/twist_mux_topics.yaml"/>
+    </include>
+
+    <!--
         Load the custom nodes.
 
         By loading the custom nodes last they have a chance of overriding the parameter settings
