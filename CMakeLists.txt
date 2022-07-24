@@ -8,9 +8,6 @@ project(scuttle_bringup)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  scuttle_model
-  scuttle_driver
-  scuttle_navigation
   roscpp
   rospy
 )
