@@ -1,27 +1,106 @@
 <launch>
-	<arg name="is_physical" default="true"/>
-	<param name="enable_tf_publish" value="true"/>
-	<param name="enable_joint_state_publish" value="true"/>
+    <arg name="is_physical" default="true"/>
+    <param name="enable_tf_publish" value="true"/>
+    <param name="enable_joint_state_publish" value="true"/>
 
-	<group unless="$(arg is_physical)">
-		<param name ="/use_sim_time" value="true"/>
+    <!--
+        Publish the robot model to the parameter server so that other nodes can determine what
+        the different joints of the robot are.
 
-		<!-- Don't need a lidar here because the gazebo files already have that included -->
-	</group>
+        The robot model comes from 'scuttle_model' which pulls the default scuttle parts from
+        'scuttle_description' and allows users to add their own parts.
+    -->
+    <param
+        name="robot_description"
+        command="$(find xacro)/xacro $(find scuttle_model)/urdf/scuttle.xacro" />
 
-	<group if="$(arg is_physical)">
-		<param name ="/use_sim_time" value="false"/>
-		<node name="scuttle_driver" pkg="scuttle_driver" type="scuttle_driver.py" output="screen"/>
-	</group>
+    <!--
+        Figure out if we're running virtual or real world and set the 'use_sim_time' parameter.
+    -->
+    <group unless="$(arg is_physical)">
+        <param name ="/use_sim_time" value="true"/>
+    </group>
+    <group if="$(arg is_physical)">
+        <param name ="/use_sim_time" value="false"/>
+    </group>
 
-	<!--
-		We don't include the SLAM node here because gmapping puts out a lot of logs to the console that can't be
-		silenced. So instead we run that as a stand-alone node. That way gmapping won't polute the navigation logs
-	-->
+    <!--
+        We always need to publish joint and robot states. So we do that here.
+    -->
+    <!--
+        First publish the joint state for the robot. The joint_state_publisher (see: http://wiki.ros.org/joint_state_publisher)
+        picks up the robot description (provided by scuttle_description and scuttle_model) from the
+        parameter server via the `robot_description` parameter.
+        The joint_state_publisher is loaded first because the robot_state_publisher listens to the
+        sensor_msgs/JointState topic which is published by the joint_state_publisher
+    -->
+    <node
+        name="joint_state_publisher"
+        pkg="joint_state_publisher"
+        type="joint_state_publisher"/>
 
-	<include file="$(find scuttle_navigation)/launch/scuttle_navigation.launch">
-		<arg name="map_file" value="$(find scuttle_navigation)/maps/map.yaml"/>
-		<arg name="move_forward_only" value="false"/>
-		<arg name="is_physical" value="$(arg is_physical)"/>
-	</include>
+    <!--
+        Second publish the robot state. The robot_state_publisher (see: http://wiki.ros.org/robot_state_publisher)
+        picks up the robot description (provided by scuttle_description and scuttle_model) from the
+        parameter server via the `robot_description` parameter.
+    -->
+    <node
+        name="robot_state_publisher"
+        pkg="robot_state_publisher"
+        type="robot_state_publisher"/>
+
+    <!--
+        We don't include the SLAM node here because gmapping puts out a lot of logs to the console that can't be
+        silenced. So instead we run that as a stand-alone node. That way gmapping won't polute the navigation logs
+    -->
+
+    <!--
+        Load scuttle_driver and navigation before loading the custom nodes so that the custom
+        nodes can override the parameters for scuttle_driver and the navigation nodes.
+    -->
+    <group if="$(arg is_physical)">
+        <include file="$(find scuttle_driver)/launch/scuttle_driver.launch">
+            <arg name="is_physical" value="$(arg is_physical)"/>
+        </include>
+    </group>
+
+    <include file="$(find scuttle_navigation)/launch/scuttle_navigation.launch">
+        <arg name="map_file" value="$(find scuttle_navigation)/maps/map.yaml"/>
+        <arg name="move_forward_only" value="false"/>
+        <arg name="is_physical" value="$(arg is_physical)"/>
+    </include>
+
+    <!--
+        Load the Twist multiplexer. This node takes multiple topics, each of which contains Twist
+        messages. It then selects the most appropriate Twist command to actually send to the
+        driver.
+    -->
+    <!--
+        We should really load the twist_mux launch file, but that tries to load a joystick_relay
+        node written in python, which is broken and hasn't been fixed since 2020.
+        See: https://github.com/ros-teleop/twist_mux/issues/22
+
+        So we avoid using the launch file and just load the nodes manually.
+    -->
+    <node pkg="twist_mux" type="twist_mux" name="twist_mux" output="screen">
+        <remap from="cmd_vel_out" to="cmd_vel"/>
+
+        <rosparam file="$(find scuttle_model)/config/twist_mux_locks.yaml"  command="load"/>
+        <rosparam file="$(find scuttle_model)/config/twist_mux_topics.yaml" command="load"/>
+    </node>
+
+    <node pkg="twist_mux" type="twist_marker" name="twist_marker">
+        <remap from="twist"  to="cmd_vel"/>
+        <remap from="marker" to="twist_marker"/>
+    </node>
+
+    <!--
+        Load the custom nodes.
+
+        By loading the custom nodes last they have a chance of overriding the parameter settings
+        for all the other nodes (see: http://wiki.ros.org/roslaunch/XML#Evaluation_order)
+    -->
+    <include file="$(find scuttle_model)/launch/scuttle_model.launch">
+        <arg name="is_physical" value="$(arg is_physical)"/>
+    </include>
 </launch>
